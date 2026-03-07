@@ -13,10 +13,8 @@ FROM python:3.11-slim AS model-downloader
 RUN pip install --no-cache-dir huggingface_hub
 
 # ACE-Step 1.5 model is public — no token required
-RUN python -c " \
-from huggingface_hub import snapshot_download; \
-snapshot_download('ACE-Step/Ace-Step1.5', local_dir='/models/acestep-v15-base'); \
-"
+COPY download_model.py /tmp/download_model.py
+RUN python /tmp/download_model.py
 
 # ─── Stage 2: Runtime with ACE-Step + RunPod SDK ───
 FROM nvidia/cuda:12.6.0-runtime-ubuntu22.04
