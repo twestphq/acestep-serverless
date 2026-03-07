@@ -192,17 +192,25 @@ def handler(event):
 
 # Start ACE-Step dedicated FastAPI server in background, then register handler
 print("[handler] Starting ACE-Step API server (acestep-api)...")
+print(f"[handler] runpod version: {runpod.__version__}")
+
 acestep_proc = subprocess.Popen(
     [
-        "uv", "run", "acestep-api",
+        sys.executable, "-m", "acestep.api_server",
         "--host", "0.0.0.0",
         "--port", "8000",
     ],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.STDOUT,
+    stdout=sys.stdout,
+    stderr=sys.stderr,
 )
 
-wait_for_acestep()
+try:
+    wait_for_acestep()
+except Exception as e:
+    print(f"[handler] FATAL: {e}")
+    # Print subprocess output for debugging
+    acestep_proc.terminate()
+    raise
 
 print("[handler] Registering RunPod serverless handler...")
 runpod.serverless.start({"handler": handler})

@@ -44,11 +44,10 @@ RUN git clone --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git /app/aceste
 
 WORKDIR /app/acestep-repo
 
-# Install ACE-Step dependencies
-RUN uv sync
-
-# Install RunPod SDK and requests
-RUN uv pip install runpod requests
+# Install ACE-Step dependencies + RunPod SDK
+RUN uv sync && \
+    uv add --no-sync runpod requests && \
+    uv sync
 
 # Copy models from stage 1
 COPY --from=model-downloader /models/acestep-v15-base /app/checkpoints/acestep-v15-base
@@ -71,4 +70,7 @@ COPY handler.py /app/acestep-repo/handler.py
 # RunPod serverless expects to listen on 8080 (handled by runpod SDK)
 EXPOSE 8080
 
-CMD ["uv", "run", "python", "handler.py"]
+# Verify runpod is importable at build time
+RUN uv run python -c "import runpod; print(f'runpod {runpod.__version__} OK')"
+
+CMD [".venv/bin/python", "handler.py"]
