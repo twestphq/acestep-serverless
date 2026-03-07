@@ -1,0 +1,68 @@
+# ACE-Step 1.5 Base Image — models + dependencies pre-installed
+# Build once, push to Docker Hub. Rebuild only when ACE-Step or deps change.
+#
+# Build:
+#   docker build -f Dockerfile.base -t twestphq/acestep-base:latest .
+#
+# Push:
+#   docker push twestphq/acestep-base:latest
+
+# ─── Stage 1: Download models from HuggingFace ───
+FROM python:3.11-slim AS model-downloader
+
+RUN pip install --no-cache-dir huggingface_hub
+
+COPY download_model.py /tmp/download_model.py
+RUN python /tmp/download_model.py
+
+# ─── Stage 2: Runtime with ACE-Step + all dependencies ───
+FROM nvidia/cuda:12.6.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 python3.11-venv python3-pip \
+    git curl ffmpeg libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Make python3.11 the default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+# Install uv for fast dependency management
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+WORKDIR /app
+
+# Clone ACE-Step 1.5
+RUN git clone --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git /app/acestep-repo
+
+WORKDIR /app/acestep-repo
+
+# Install ACE-Step dependencies + RunPod SDK
+RUN uv sync && \
+    uv add --no-sync runpod requests && \
+    uv sync
+
+# Copy models from stage 1
+COPY --from=model-downloader /models/acestep-v15-base /app/checkpoints/acestep-v15-base
+
+# Symlink for ACE-Step to find models
+RUN mkdir -p /app/acestep-repo/checkpoints && \
+    ln -sf /app/checkpoints/acestep-v15-base /app/acestep-repo/checkpoints/acestep-v15-base
+
+# ACE-Step environment config
+ENV ACESTEP_DEVICE=cuda \
+    ACESTEP_API_HOST=0.0.0.0 \
+    ACESTEP_API_PORT=8000 \
+    ACESTEP_OUTPUT_DIR=/tmp/acestep-output
+
+RUN mkdir -p /tmp/acestep-output
+
+# Verify everything works at build time
+RUN uv run python -c "import runpod; print(f'runpod {runpod.__version__} OK')"
+RUN .venv/bin/python -c "import acestep; print('acestep OK')"
