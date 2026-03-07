@@ -58,9 +58,7 @@ RUN mkdir -p /app/acestep-repo/checkpoints && \
     ln -sf /app/checkpoints/acestep-v15-base /app/acestep-repo/checkpoints/acestep-v15-base
 
 # ACE-Step environment config
-ENV ACESTEP_CONFIG_PATH=/app/checkpoints/acestep-v15-base \
-    ACESTEP_DEVICE=cuda \
-    ACESTEP_LM_BACKEND=vllm \
+ENV ACESTEP_DEVICE=cuda \
     ACESTEP_API_HOST=0.0.0.0 \
     ACESTEP_API_PORT=8000 \
     ACESTEP_OUTPUT_DIR=/tmp/acestep-output

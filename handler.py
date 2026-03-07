@@ -190,15 +190,13 @@ def handler(event):
     return {"error": f"Task {task_id} timed out after {MAX_POLL_ATTEMPTS * POLL_INTERVAL}s"}
 
 
-# Start ACE-Step API server in background, then register handler
-print("[handler] Starting ACE-Step API server...")
+# Start ACE-Step dedicated FastAPI server in background, then register handler
+print("[handler] Starting ACE-Step API server (acestep-api)...")
 acestep_proc = subprocess.Popen(
     [
-        sys.executable, "-m", "acestep",
-        "--api-only",
-        "--bf16", "true",
-        "--api-host", "0.0.0.0",
-        "--api-port", "8000",
+        "uv", "run", "acestep-api",
+        "--host", "0.0.0.0",
+        "--port", "8000",
     ],
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
