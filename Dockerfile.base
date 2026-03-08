@@ -48,12 +48,13 @@ RUN uv sync && \
     uv add --no-sync runpod requests && \
     uv sync
 
-# Copy models from stage 1
-COPY --from=model-downloader /models/acestep-v15-base /app/checkpoints/acestep-v15-base
+# Copy models from stage 1 directly into checkpoints root
+COPY --from=model-downloader /models/acestep-v15-base /app/checkpoints
 
-# Symlink for ACE-Step to find models
-RUN mkdir -p /app/acestep-repo/checkpoints && \
-    ln -sf /app/checkpoints/acestep-v15-base /app/acestep-repo/checkpoints/acestep-v15-base
+# Symlink so ACE-Step finds models at /app/acestep-repo/checkpoints/
+# ACE-Step expects: checkpoints/acestep-v15-turbo/, checkpoints/vae/, etc.
+RUN rm -rf /app/acestep-repo/checkpoints && \
+    ln -sf /app/checkpoints /app/acestep-repo/checkpoints
 
 # ACE-Step environment config
 ENV ACESTEP_DEVICE=cuda \
